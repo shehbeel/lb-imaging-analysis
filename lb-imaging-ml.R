@@ -668,7 +668,7 @@ ggarrange(p2,
           labels = c("B"))
 
 require(nnet)
-mri.pmirna.multinom.fit <- multinom(Short_histology ~ `miR-451a_p`, data = mri.pmirna)
+mri.pmirna.multinom.fit <- multinom(Short_histology ~ `Cystic..core...mm.3.` + `Enhancing..mm.3.` + `Non.enhancing..mm.3.` + `Total.Tumor.Volume..mm.3.` + `miR-451a_p`, data = mri.pmirna)
 summary(mri.pmirna.multinom.fit)
 round((1 - pnorm(abs(summary(mri.pmirna.multinom.fit)$coefficients/summary(mri.pmirna.multinom.fit)$standard.errors), 0, 1)) * 2, digits = 3)
 exp(coef(mri.pmirna.multinom.fit))
@@ -778,7 +778,7 @@ ggarrange(p2,
           labels = c("B"))
 
 require(nnet)
-mri.cmirna.multinom.fit <- multinom(Short_histology ~ `miR-3197_c`, data = mri.cmirna)
+mri.cmirna.multinom.fit <- multinom(Short_histology ~ `Cystic..core...mm.3.` + `Enhancing..mm.3.` + `Non.enhancing..mm.3.` + `Total.Tumor.Volume..mm.3.` + `miR-124-3p_c` + `miR-3197_c` + `miR-451a_c` + `miR-6126_c` + `miR-6131_c` + `miR-6870-3p_c`, data = mri.cmirna)
 summary(mri.cmirna.multinom.fit)
 round((1 - pnorm(abs(summary(mri.cmirna.multinom.fit)$coefficients/summary(mri.cmirna.multinom.fit)$standard.errors), 0, 1)) * 2, digits = 3)
 exp(coef(mri.cmirna.multinom.fit))
