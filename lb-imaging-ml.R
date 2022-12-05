@@ -1,9 +1,9 @@
 #library(dplyr)
 
 # Load datasets
-clinical <- read.csv("Clinical Data miRNA Cohort.csv")
-mirna <- read.csv("miRNA expression raw data.csv")
-mri <- read.csv("MRI Imaging  results_2022-04-20.csv")
+clinical <- read.csv("input-datasets/Clinical Data miRNA Cohort.csv")
+mirna <- read.csv("input-datasets/miRNA expression raw data.csv")
+mri <- read.csv("input-datasets/MRI Imaging  results_2022-04-20.csv")
 
 # RNA DATA PREPROCESSING
 # Remove control samples
@@ -801,14 +801,145 @@ auc(multcap(
 
 ###################
 # Export Plasma miRNA data
-write.csv(pmirna,"datasets/plasma_mirna.csv", row.names = FALSE)
+#write.csv(pmirna,"preprocessed-datasets/plasma_mirna.csv", row.names = FALSE)
 # Export CSF miRNA data
-write.csv(cmirna,"datasets/csf_mirna.csv", row.names = FALSE)
+#write.csv(cmirna,"preprocessed-datasets/csf_mirna.csv", row.names = FALSE)
 # Export clinical data
-write.csv(clinical,"datasets/clinical_data.csv", row.names = FALSE)
+#write.csv(clinical,"preprocessed-datasets/clinical_data.csv", row.names = FALSE)
 # Export MRI data
-write.csv(mri,"datasets/mri_data.csv", row.names = FALSE)
+#write.csv(mri,"preprocessed-datasets/mri_data.csv", row.names = FALSE)
 # Export MRI + Plasma miRNA data
-write.csv(mri.pmirna,"datasets/mri_plasma_mirna.csv", row.names = FALSE)
+#write.csv(mri.pmirna,"preprocessed-datasets/mri_plasma_mirna.csv", row.names = FALSE)
 # Export MRI + CSF miRNA data
-write.csv(mri.cmirna,"datasets/mri_csf_mirna.csv", row.names = FALSE)
+#write.csv(mri.cmirna,"preprocessed-datasets/mri_csf_mirna.csv", row.names = FALSE)
+
+###############################################################################################
+###############################################################################################
+# Add ATRT back into CSF Dataset
+# CSF miRNA MSGL
+
+# Add Short Histology to CSF miRNA dataset
+df1 = clinical[,c("StudySubject_ID", "SDG_ID", "Short_histology")]
+cmirna.v2 = merge(df1, mirna.c, by = "SDG_ID", all = T)
+
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-108"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-127"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-129"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-134"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-148"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-154"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-158"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-161"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-182"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-187"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-215"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-225"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-228"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-234"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-251"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-254"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-31"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-38"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-42"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-53"),]
+cmirna.v2 = cmirna.v2[-which(cmirna.v2$SDG_ID == "15635-90"),]
+
+require(nnet)
+cmirna.v2.multinom.fit <- multinom(Short_histology ~ `miR-124-3p_c`+`miR-3197_c`+`miR-451a_c`+`miR-6126_c`+`miR-6131_c`+`miR-6870-3p_c`, data = cmirna.v2)
+summary(cmirna.v2.multinom.fit)
+round((1 - pnorm(abs(summary(cmirna.v2.multinom.fit)$coefficients/summary(cmirna.v2.multinom.fit)$standard.errors), 0, 1)) * 2, digits = 3)
+exp(coef(cmirna.v2.multinom.fit))
+
+head(cmirna.v2.pp <- fitted(cmirna.v2.multinom.fit))
+library(sjPlot)
+tab_model(cmirna.v2.multinom.fit, digits = 6)
+
+cmirna.v2.prediction = predict(cmirna.v2.multinom.fit, newdata = cmirna.v2, "class")
+sum(cmirna.v2.prediction == cmirna.v2$Short_histology)/nrow(cmirna.v2)
+
+
+cmirna.v2.result1 = predict(cmirna.v2.multinom.fit, newdata = cmirna.v2, type='probs')
+library(HandTill2001)
+auc(multcap(
+  response = factor(cmirna.v2$Short_histology),
+  predicted = as.matrix(cmirna.v2.result1)
+))
+
+###############################################################################################
+###############################################################################################
+# Manually selecting more miRNAs for Plasma miRNA Dataset
+require(nnet)
+pmirna.v2.multinom.fit <- multinom(Short_histology ~ `miR-16-5p_p` + `miR-3197_p` + `miR-451a_p` + `miR-4745-3p_p` + `miR-6126_p` + `miR-6870-3p_p`, data = pmirna)
+summary(pmirna.v2.multinom.fit)
+round((1 - pnorm(abs(summary(pmirna.v2.multinom.fit)$coefficients/summary(pmirna.v2.multinom.fit)$standard.errors), 0, 1)) * 2, digits = 3)
+exp(coef(pmirna.v2.multinom.fit))
+
+head(pmirna.v2.pp <- fitted(pmirna.v2.multinom.fit))
+library(sjPlot)
+tab_model(pmirna.v2.multinom.fit, digits = 6)
+
+pmirna.v2.prediction = predict(pmirna.v2.multinom.fit, newdata = pmirna, "class")
+sum(pmirna.v2.prediction == pmirna$Short_histology)/nrow(pmirna)
+
+
+pmirna.v2.result1 = predict(pmirna.v2.multinom.fit, newdata = pmirna, type='probs')
+library(HandTill2001)
+auc(multcap(
+  response = factor(pmirna$Short_histology),
+  predicted = as.matrix(pmirna.v2.result1)
+))
+
+###############################################################################################
+###############################################################################################
+# Re-Doing MRI + Plasma miRNA
+require(nnet)
+mri.pmirna.v2.multinom.fit <- multinom(Short_histology ~ `Cystic..core...mm.3.` + `Enhancing..mm.3.` + `Non.enhancing..mm.3.` + `Total.Tumor.Volume..mm.3.` + `miR-16-5p_p` + `miR-3197_p` + `miR-451a_p` + `miR-4745-3p_p` + `miR-6126_p` + `miR-6870-3p_p`, data = mri.pmirna)
+summary(mri.pmirna.v2.multinom.fit)
+round((1 - pnorm(abs(summary(mri.pmirna.v2.multinom.fit)$coefficients/summary(mri.pmirna.v2.multinom.fit)$standard.errors), 0, 1)) * 2, digits = 3)
+exp(coef(mri.pmirna.v2.multinom.fit))
+
+head(mri.pmirna.v2.pp <- fitted(mri.pmirna.v2.multinom.fit))
+library(sjPlot)
+tab_model(mri.pmirna.v2.multinom.fit, digits = 6)
+
+mri.pmirna.v2.prediction = predict(mri.pmirna.v2.multinom.fit, newdata = mri.pmirna, "class")
+sum(mri.pmirna.v2.prediction == mri.pmirna$Short_histology)/nrow(mri.pmirna)
+
+
+mri.pmirna.v2.result1 = predict(mri.pmirna.v2.multinom.fit, newdata = mri.pmirna, type='probs')
+library(HandTill2001)
+auc(multcap(
+  response = factor(mri.pmirna$Short_histology),
+  predicted = as.matrix(mri.pmirna.v2.result1)
+))
+
+
+################################################################################
+# Bar Plot of Results
+#rm(list = ls())
+df = read.csv("Accuracy.csv")
+df$Features = factor(df$Features,
+                     levels = c("MRI", "Plasma miRNA", "CSF miRNA", "MRI and Plasma miRNA", "MRI and CSF miRNA"))
+df$Value = round(df$Value, digits = 2)
+
+ggplot(df, aes(x = Features, y = Value, fill = Variable)) + 
+  geom_bar(stat="identity", position=position_dodge()) + 
+  geom_text(aes(label = Value), vjust = -1.6, position = position_dodge(0.9)) + theme_bw() + 
+  labs(x = "", y = "Prediction accuracy", fill = "") + ylim(0,1.05) + 
+  # scale_x_discrete(labels=c("MRI" = "4 MRI vars", 
+  #                           "Plasma miRNA" = "6 miRNA vars",
+  #                           "CSF miRNA" = "6 miRNA vars",
+  #                           "Plasma miRNA + MRI" = "4 MRI vars + 6 Plasma miRNA",
+  #                           "CSF miRNA + MRI" = "4 MRI vars + 6 Plasma miRNA"
+  #                           )) + 
+  scale_x_discrete(labels=c("MRI" = "MRI (4)", 
+                            "Plasma miRNA" = "Plasma miRNA (6)",
+                            "CSF miRNA" = "CSF miRNA (6)",
+                            "MRI and Plasma miRNA" = "MRI (4) + Plasma miRNA (6)",
+                            "MRI and CSF miRNA" = "MRI (4) + CSF miRNA (6)")) + 
+  theme(legend.position = "right",
+        axis.text.x = element_text(color = "grey20", size = 12, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, face = "plain")) + 
+  scale_fill_manual(values = c("black","grey"))
